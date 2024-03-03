@@ -1,0 +1,6 @@
+# cache dosyaları
+/**/**__pycache__
+
+**/dist
+**/build
+**/src/*.egg-info
