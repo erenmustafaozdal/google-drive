@@ -6,6 +6,9 @@ name = "pypi"
 [packages]
 pydrive = "*"
 emo-file-system = "*"
+setuptools = "*"
+wheel = "*"
+twine = "*"
 
 [dev-packages]
 
