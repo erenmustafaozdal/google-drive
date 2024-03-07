@@ -144,3 +144,7 @@ class GDrive:
         self.log.info(f"'{folder_id}' ID'li klasörde listeleme yapıldı.")
         self.log.info(f"----- {len(file_list)} adet dosya/klasör bulundu")
 
+    def delete_file(self, file_id: str):
+        file = self.drive.CreateFile({'id': file_id})
+        file.Delete()
+        self.log.info(f"'{file_id}' ID'li dosya/klasör silindi.")
