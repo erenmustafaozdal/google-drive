@@ -88,6 +88,11 @@ class GDrive:
             "parents": [{'id': folder_id}],
             "mimeType": "application/vnd.google-apps.folder"
         }
+        file_list = self.get_file_list(folder_id)
+        for file in file_list:
+            if file["title"] == folder_name:
+                return file["id"]
+
         folder = self._create_file(metadata)
 
         return folder["id"]
