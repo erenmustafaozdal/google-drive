@@ -132,3 +132,10 @@ class GDrive:
         file = self.drive.CreateFile({'id': file_id})
         file.GetContentFile(filename=filename)
         return file.content  # BytesIO
+
+    def get_file_list(self, folder_id: str):
+        query = f"'{folder_id}' in parents and trashed=false"
+        file_list = self.drive.ListFile({'q': query}).GetList()
+        self.log.info(f"'{folder_id}' ID'li klasörde listeleme yapıldı.")
+        self.log.info(f"----- {len(file_list)} adet dosya/klasör bulundu")
+
