@@ -4,3 +4,9 @@
 **/dist
 **/build
 **/src/*.egg-info
+
+# Test dosyasını gizle
+test.py
+
+# Google Drive Client Secret json dosyasını gizle
+client_secrets.json
