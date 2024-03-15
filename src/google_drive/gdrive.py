@@ -57,12 +57,52 @@ class GDrive:
 
     def _create_file(self, meta_data: Dict, file_path: Union[str, None] = None):
         # Görseli Google Drive'a yükle
-        file = self.drive.CreateFile(meta_data)
-        if file_path:
-            file.SetContentFile(file_path)
-        file.Upload()
+        try:
+            file = self.drive.CreateFile(meta_data)
+            if file_path:
+                file.SetContentFile(file_path)
+            file.Upload()
+            self.log.info(f"Dosya Google Drive'a yüklendi: {file_path}")
+        except (InvalidClientSecretsError, InvalidConfigError) as e:
+            self.log.error(f"Yükleme esnasında bir hata oldu: {str(e)}")
+            self.drive = self.authorize()
+            return self._create_file(meta_data, file_path)
 
         return file
+
+    def _get_file_list(self, folder_id: str):
+        try:
+            query = f"'{folder_id}' in parents and trashed=false"
+            file_list = self.drive.ListFile({'q': query}).GetList()
+            self.log.info(f"'{folder_id}' ID'li klasörde listeleme yapıldı.")
+            self.log.info(f"----- {len(file_list)} adet dosya/klasör bulundu")
+        except (InvalidClientSecretsError, InvalidConfigError) as e:
+            self.log.error(f"Listeleme esnasında bir hata oldu: {str(e)}")
+            self.drive = self.authorize()
+            return self._get_file_list(folder_id)
+
+        return file_list
+
+    def _get_file_content(self, file_id: str, file_path: str) -> BytesIO:
+        try:
+            file = self.drive.CreateFile({'id': file_id})
+            file.GetContentFile(filename=file_path)
+            self.log.info(f"'{file_id}' ID'li dosya indirildi.")
+            return file.content  # BytesIO
+        except (InvalidClientSecretsError, InvalidConfigError) as e:
+            self.log.error(f"Dosya indirme esnasında bir hata oldu: {str(e)}")
+            self.drive = self.authorize()
+            return self._get_file_content(file_id, file_path)
+
+    def _delete_file(self, file_id: str):
+        try:
+            file = self.drive.CreateFile({'id': file_id})
+            file.Delete()
+            self.log.info(f"'{file_id}' ID'li dosya/klasör silindi.")
+        except (InvalidClientSecretsError, InvalidConfigError) as e:
+            self.log.error(f"Dosya silme esnasında bir hata oldu: {str(e)}")
+            self.drive = self.authorize()
+            return self._delete_file(file_id)
 
     def create_folders(self, path: str) -> str:
         """Tek bir klasör veya klasör ağaç yapısı oluşturur
@@ -88,7 +128,7 @@ class GDrive:
             "parents": [{'id': folder_id}],
             "mimeType": "application/vnd.google-apps.folder"
         }
-        file_list = self.get_file_list(folder_id)
+        file_list = self._get_file_list(folder_id)
         for file in file_list:
             if file["title"] == folder_name:
                 return file["id"]
@@ -111,13 +151,7 @@ class GDrive:
         }
 
         # Görseli Google Drive'a yükle
-        try:
-            file = self._create_file(file_metadata, image_path)
-            self.log.info(f"Görsel Google Drive'a yüklendi: {image_path}")
-        except (InvalidClientSecretsError, InvalidConfigError) as e:
-            self.log.error(f"Yükleme esnasında bir hata oldu: {str(e)}")
-            self.drive = self.authorize()
-            self.upload_image(image_path)
+        file = self._create_file(file_metadata, image_path)
 
         return file['id']
 
@@ -134,19 +168,4 @@ class GDrive:
             return filename
 
         # Dosya ID'sini kullanarak dosyayı indirme
-        file = self.drive.CreateFile({'id': file_id})
-        file.GetContentFile(filename=filename)
-        return file.content  # BytesIO
-
-    def get_file_list(self, folder_id: str):
-        query = f"'{folder_id}' in parents and trashed=false"
-        file_list = self.drive.ListFile({'q': query}).GetList()
-        self.log.info(f"'{folder_id}' ID'li klasörde listeleme yapıldı.")
-        self.log.info(f"----- {len(file_list)} adet dosya/klasör bulundu")
-
-        return file_list
-
-    def delete_file(self, file_id: str):
-        file = self.drive.CreateFile({'id': file_id})
-        file.Delete()
-        self.log.info(f"'{file_id}' ID'li dosya/klasör silindi.")
+        return self._get_file_content(file_id, filename)
